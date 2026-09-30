@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixIt — Report something broken</title>
+<style>
+  :root{
+    --paper: #f6f5f1;
+    --paper-raised: #fffffe;
+    --ink: #1f2430;
+    --ink-soft: #565f75;
+    --line: #d8d5cc;
+    --caution: #f2b705;
+    --caution-ink: #3a2f00;
+    --alert: #c1432a;
+    --fix: #3a7d44;
+    --radius-sm: 4px;
+    --radius-md: 10px;
+    font-size: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.01em; }
+
+  .mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  a { color: inherit; }
+
+  /* ---------- Layout shell ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+  .brand .dot { color: var(--caution); }
+
+  .nav-link {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+    padding-bottom: 2px;
+  }
+  .nav-link:hover { border-bottom-color: var(--ink-soft); }
+
+  main { max-width: 760px; margin: 0 auto; padding: 0 24px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---------- Home / hero ---------- */
+  .hero {
+    padding: 64px 0 40px;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    max-width: 11ch;
+  }
+  .hero p {
+    margin-top: 14px;
+    max-width: 42ch;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+  }
+
+  .big-report-btn {
+    margin-top: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--caution);
+    color: var(--caution-ink);
+    border: none;
+    font-weight: 700;
+    font-size: 1.15rem;
+    padding: 20px 34px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--ink);
+    transition: transform 0.12s ease;
+  }
+  .big-report-btn:hover { transform: translateY(-2px); }
+  .big-report-btn:active { transform: translateY(0); }
+  .big-report-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+
+  .steps {
+    margin-top: 56px;
+    border-top: 1px solid var(--line);
+    padding-top: 32px;
+  }
+  .steps h2 { font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; }
+  .step-list {
+    margin-top: 20px;
+    display: grid;
+    gap: 22px;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .step .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    width: 1.6em;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .step .label { font-weight: 600; }
+  .step .desc { color: var(--ink-soft); font-size: 0.92rem; margin-top: 2px; }
+
+  .staff-link-row {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Form ---------- */
+  .form-header { padding-top: 40px; }
+  .form-header h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); }
+  .form-header p { color: var(--ink-soft); margin-top: 8px; }
+
+  form { margin-top: 32px; display: grid; gap: 26px; }
+
+  .field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 8px;
+  }
+  .field .hint { font-weight: 400; color: var(--ink-soft); font-size: 0.8rem; margin-left: 6px; }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+  }
+  textarea { resize: vertical; min-height: 96px; }
+
+  /* category chips */
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 520px) {
+    .category-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .category-grid input { position: absolute; opacity: 0; pointer-events: none; }
+  .category-chip {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 6px;
+    text-align: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: var(--paper-raised);
+    position: relative;
+    transition: border-color 0.1s ease, background 0.1s ease;
+  }
+  .category-chip .icon { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+  .category-chip:hover { border-color: var(--ink-soft); }
+  input:checked + .category-chip {
+    border-color: var(--ink);
+    background: #fff9e0;
+    font-weight: 600;
+  }
+  input:focus-visible + .category-chip { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* photo upload */
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius-md);
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--paper-raised);
+  }
+  .dropzone:hover { border-color: var(--ink-soft); }
+  .dropzone .dz-icon { font-size: 1.6rem; }
+  .dropzone .dz-text { margin-top: 8px; font-size: 0.9rem; color: var(--ink-soft); }
+  .dropzone input { display: none; }
+
+  .photo-preview {
+    margin-top: 14px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+  }
+  .photo-preview.active { display: flex; }
+  .photo-preview img {
+    width: 84px; height: 84px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+  }
+  .photo-preview button {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .photo-preview button:hover { border-color: var(--alert); color: var(--alert); }
+
+  .submit-row { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
+  .submit-btn {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 15px 28px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .submit-btn:hover { background: #333c4f; }
+  .submit-btn:focus-visible { outline: 3px solid var(--caution); outline-offset: 3px; }
+  .error-msg { color: var(--alert); font-size: 0.85rem; display: none; }
+  .error-msg.active { display: block; }
+
+  /* ---------- Confirmation ---------- */
+  .confirm-wrap {
+    padding: 90px 0;
+    text-align: center;
+  }
+  .confirm-badge {
+    width: 68px; height: 68px;
+    margin: 0 auto 22px;
+    border-radius: 50%;
+    background: var(--fix);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+  }
+  .confirm-wrap h1 { font-size: 1.6rem; }
+  .confirm-wrap p { color: var(--ink-soft); margin-top: 10px; }
+  .confirm-ticket {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+  .confirm-actions { margin-top: 34px; display: flex; gap: 14px; justify-content: center; }
+  .ghost-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .ghost-btn:hover { border-color: var(--ink); }
+
+  /* ---------- Staff dashboard ---------- */
+  .staff-header { padding-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  .staff-header h1 { font-size: clamp(1.5rem, 4vw, 2rem); }
+  .staff-header p { color: var(--ink-soft); margin-top: 6px; font-size: 0.9rem; }
+
+  .filter-row {
+    margin-top: 22px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .filter-chip.active { border-color: var(--ink); color: var(--ink); font-weight: 600; background: #fff; }
+
+  .ticket-list { margin-top: 24px; display: grid; gap: 12px; }
+
+  .ticket {
+    display: flex;
+    gap: 16px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--ink-soft);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+  }
+  .ticket[data-status="open"] { border-left-color: var(--alert); }
+  .ticket[data-status="fixed"] { border-left-color: var(--fix); opacity: 0.75; }
+
+  .ticket img {
+    width: 76px; height: 76px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+  }
+  .ticket .no-photo {
+    width: 76px; height: 76px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    border: 1px dashed var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .ticket-main { flex: 1; min-width: 0; }
+  .ticket-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .ticket-id { font-size: 0.75rem; color: var(--ink-soft); }
+  .ticket-cat { font-weight: 700; font-size: 1rem; }
+  .ticket-loc { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
+  .ticket-desc { margin-top: 8px; font-size: 0.9rem; }
+  .ticket-meta { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ticket-time { font-size: 0.72rem; color: var(--ink-soft); }
+
+  .status-toggle {
+    font-size: 0.78rem;
+    border: 1px solid var(--line);
+    background: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .status-toggle.open { color: var(--alert); border-color: var(--alert); }
+  .status-toggle.fixed { color: var(--fix); border-color: var(--fix); }
+
+  .empty-state {
+    margin-top: 30px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ink-soft);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand" onclick="showView('home')">FixIt<span class="dot">.</span></div>
+  <a class="nav-link" onclick="showView('staff')">Maintenance view</a>
+</div>
+
+<main>
+
+  <!-- ===================== HOME VIEW ===================== -->
+  <section id="view-home" class="view active">
+    <div class="hero">
+      <h1>Something's broken?<br>Let's get it fixed.</h1>
+      <p>Snap a photo, tell us what's wrong and where, and it goes straight to the maintenance team.</p>
+      <button class="big-report-btn" onclick="showView('report')">
+        Report a Problem
+      </button>
+    </div>
+
+    <div class="steps">
+      <h2>HOW IT WORKS</h2>
+      <div class="step-list">
+        <div class="step">
+          <span class="num mono">01</span>
+          <div>
+            <div class="label">Take or upload a photo</div>
+            <div class="desc">Show us exactly what's broken.</div>
+          </div>
+        </div>
+        <div class="step">
+          <span class="num mono">02</span>
+          <div>
+            <div class="label">Pick a category and location</div>
+            <div class="desc">Chair, desk, computer, light, door, window, or other.</div>
+          </div>
+        </div>
+        <div class="step">
+          <span class="num mono">03</span>
+          <div>
+            <div class="label">Describe the problem</div>
+            <div class="desc">A sentence or two is enough.</div>
+          </div>
+        </div>
+        <div class="step">
+          <span class="num mono">04</span>
+          <div>
+            <div class="label">Send it</div>
+            <div class="desc">The maintenance team sees it right away.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="staff-link-row">
+      Work in maintenance? <a class="nav-link" onclick="showView('staff')">Open the staff dashboard →</a>
+    </div>
+  </section>
+
+  <!-- ===================== REPORT FORM VIEW ===================== -->
+  <section id="view-report" class="view">
+    <div class="form-header">
+      <h1>Report a problem</h1>
+      <p>Fill in what you can — every field helps maintenance find and fix it faster.</p>
+    </div>
+
+    <form id="report-form" novalidate>
+
+      <div class="field">
+        <label for="photo-input">Photo</label>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload or take a photo">
+          <div class="dz-icon">📷</div>
+          <div class="dz-text">Tap to take or upload a photo</div>
+          <input type="file" id="photo-input" accept="image/*" capture="environment">
+        </div>
+        <div class="photo-preview" id="photo-preview">
+          <img id="photo-preview-img" alt="Preview of uploaded photo">
+          <button type="button" id="photo-remove">Remove</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="category-label">What's broken?</label>
+        <div class="category-grid" role="radiogroup" aria-labelledby="category-label">
+          <input type="radio" name="category" id="cat-chair" value="Chair">
+          <label class="category-chip" for="cat-chair"><span class="icon">🪑</span>Chair</label>
+
+          <input type="radio" name="category" id="cat-desk" value="Desk">
+          <label class="category-chip" for="cat-desk"><span class="icon">🗄️</span>Desk</label>
+
+          <input type="radio" name="category" id="cat-computer" value="Computer">
+          <label class="category-chip" for="cat-computer"><span class="icon">🖥️</span>Computer</label>
+
+          <input type="radio" name="category" id="cat-light" value="Light">
+          <label class="category-chip" for="cat-light"><span class="icon">💡</span>Light</label>
+
+          <input type="radio" name="category" id="cat-door" value="Door">
+          <label class="category-chip" for="cat-door"><span class="icon">🚪</span>Door</label>
+
+          <input type="radio" name="category" id="cat-window" value="Window">
+          <label class="category-chip" for="cat-window"><span class="icon">🪟</span>Window</label>
+
+          <input type="radio" name="category" id="cat-other" value="Other">
+          <label class="category-chip" for="cat-other"><span class="icon">🔧</span>Other</label>
+        </div>
+        <div class="error-msg" id="category-error">Please choose a category.</div>
+      </div>
+
+      <div class="field">
+        <label for="location-input">Location <span class="hint">e.g. Room 204, Main hallway</span></label>
+        <input type="text" id="location-input" placeholder="Where is it?">
+        <div class="error-msg" id="location-error">Please tell us where the problem is.</div>
+      </div>
+
+      <div class="field">
+        <label for="description-input">Description</label>
+        <textarea id="description-input" placeholder="What's wrong with it?"></textarea>
+        <div class="error-msg" id="description-error">Please add a short description.</div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="submit-btn">Report Problem</button>
+        <a class="nav-link" onclick="showView('home')">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <!-- ===================== CONFIRMATION VIEW ===================== -->
+  <section id="view-confirm" class="view">
+    <div class="confirm-wrap">
+      <div class="confirm-badge">✓</div>
+      <h1>Thank you! Your report has been sent.</h1>
+      <p>The maintenance team can now see your photo and details.</p>
+      <div class="confirm-ticket mono" id="confirm-ticket-id"></div>
+      <div class="confirm-actions">
+        <button class="submit-btn" onclick="showView('report'); resetForm();">Report another problem</button>
+        <button class="ghost-btn" onclick="showView('home')">Back to home</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== STAFF VIEW ===================== -->
+  <section id="view-staff" class="view">
+    <div class="staff-header">
+      <div>
+        <h1>Reported problems</h1>
+        <p id="staff-count"></p>
+      </div>
+      <a class="nav-link" onclick="showView('home')">← Back to home</a>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="open">Open</button>
+      <button class="filter-chip" data-filter="fixed">Fixed</button>
+    </div>
+
+    <div class="ticket-list" id="ticket-list"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">No reports yet. Once students submit a problem, it'll show up here.</div>
+  </section>
+
+</main>
+
+<script>
+/* ======================================================
+   FixIt — app logic
+   Reports are stored in the browser's localStorage under
+   the key "fixit_reports". Each report is one object:
+   { id, category, location, description, photo, status, createdAt }
+   ====================================================== */
+
+const STORAGE_KEY = 'fixit_reports';
+let uploadedPhotoDataUrl = null; // holds the base64 photo while filling out the form
+
+/* ---------- View switching ---------- */
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (name === 'staff') renderTickets();
+}
+
+/* ---------- Storage helpers ---------- */
+function getReports() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+function saveReports(reports) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+}
+
+/* ---------- Photo upload ---------- */
+const dropzone = document.getElementById('dropzone');
+const photoInput = document.getElementById('photo-input');
+const photoPreview = document.getElementById('photo-preview');
+const photoPreviewImg = document.getElementById('photo-preview-img');
+
+dropzone.addEventListener('click', () => photoInput.click());
+dropzone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); photoInput.click(); }
+});
+
+photoInput.addEventListener('change', () => {
+  const file = photoInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    uploadedPhotoDataUrl = e.target.result; // base64 string, easy to store and re-display
+    photoPreviewImg.src = uploadedPhotoDataUrl;
+    photoPreview.classList.add('active');
+    dropzone.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('photo-remove').addEventListener('click', () => {
+  uploadedPhotoDataUrl = null;
+  photoInput.value = '';
+  photoPreview.classList.remove('active');
+  dropzone.style.display = 'block';
+});
+
+/* ---------- Form submit ---------- */
+const form = document.getElementById('report-form');
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const category = form.querySelector('input[name="category"]:checked');
+  const location = document.getElementById('location-input').value.trim();
+  const description = document.getElementById('description-input').value.trim();
+
+  // Basic validation — category, location and description are required.
+  // Photo is encouraged but optional, since not every device has a camera handy.
+  let valid = true;
+  toggleError('category-error', !category); if (!category) valid = false;
+  toggleError('location-error', !location); if (!location) valid = false;
+  toggleError('description-error', !description); if (!description) valid = false;
+  if (!valid) return;
+
+  const report = {
+    id: 'FX-' + Date.now().toString().slice(-6),
+    category: category.value,
+    location,
+    description,
+    photo: uploadedPhotoDataUrl,
+    status: 'open',
+    createdAt: new Date().toISOString()
+  };
+
+  const reports = getReports();
+  reports.unshift(report); // newest first
+  saveReports(reports);
+
+  document.getElementById('confirm-ticket-id').textContent = 'Ticket ' + report.id;
+  showView('confirm');
+});
+
+function toggleError(id, show) {
+  document.getElementById(id).classList.toggle('active', show);
+}
+
+function resetForm() {
+  form.reset();
+  uploadedPhotoDataUrl = null;
+  photoInput.value = '';
+  photoPreview.classList.remove('active');
+  dropzone.style.display = 'block';
+  ['category-error', 'location-error', 'description-error'].forEach(id => toggleError(id, false));
+}
+
+/* ---------- Staff dashboard ---------- */
+let currentFilter = 'all';
+
+document.querySelectorAll('.filter-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderTickets();
+  });
+});
+
+function renderTickets() {
+  const reports = getReports();
+  const list = document.getElementById('ticket-list');
+  const empty = document.getElementById('empty-state');
+  const count = document.getElementById('staff-count');
+
+  const openCount = reports.filter(r => r.status === 'open').length;
+  count.textContent = reports.length
+    ? `${reports.length} total · ${openCount} still open`
+    : '';
+
+  const filtered = currentFilter === 'all'
+    ? reports
+    : reports.filter(r => r.status === currentFilter);
+
+  list.innerHTML = '';
+
+  if (filtered.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = reports.length
+      ? 'No reports match this filter.'
+      : "No reports yet. Once students submit a problem, it'll show up here.";
+    return;
+  }
+  empty.style.display = 'none';
+
+  filtered.forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'ticket';
+    el.dataset.status = r.status;
+
+    const photoHtml = r.photo
+      ? `<img src="${r.photo}" alt="Photo of the reported problem">`
+      : `<div class="no-photo">No photo</div>`;
+
+    const time = new Date(r.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+    el.innerHTML = `
+      ${photoHtml}
+      <div class="ticket-main">
+        <div class="ticket-top">
+          <div>
+            <div class="ticket-cat">${escapeHtml(r.category)}</div>
+            <div class="ticket-loc">${escapeHtml(r.location)}</div>
+          </div>
+          <div class="ticket-id mono">${r.id}</div>
+        </div>
+        <div class="ticket-desc">${escapeHtml(r.description)}</div>
+        <div class="ticket-meta">
+          <span class="ticket-time mono">${time}</span>
+          <button class="status-toggle ${r.status}" data-id="${r.id}">
+            ${r.status === 'open' ? 'Mark as fixed' : 'Reopen'}
+          </button>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  // Wire up the status toggle buttons
+  list.querySelectorAll('.status-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const reports = getReports();
+      const target = reports.find(r => r.id === btn.dataset.id);
+      target.status = target.status === 'open' ? 'fixed' : 'open';
+      saveReports(reports);
+      renderTickets();
+    });
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
